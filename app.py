@@ -155,19 +155,32 @@ def download():
         speed = data.get('speed', 'normal')
         gender = data.get('gender', 'default')
         file_format = data.get('format', 'wav')
-        
+
         if not text.strip():
             return jsonify({'error': 'Teks tidak boleh kosong'}), 400
-        
-        filepath = tts_manager.text_to_speech(text, speed, gender, save_file=True, file_format=file_format)
-        
+
+        filepath = tts_manager.text_to_speech(
+            text, speed, gender, save_file=True, file_format=file_format
+        )
+
         if filepath and os.path.exists(filepath):
-            return send_file(filepath, as_attachment=True, download_name=f"tts_output.{file_format}")
+            with open(filepath, 'rb') as f:
+                data = f.read()
+
+            response = send_file(
+                io.BytesIO(data),
+                as_attachment=True,
+                download_name=f"tts_output.{file_format}",
+                mimetype='audio/mpeg' if file_format == 'mp3' else 'audio/wav'
+            )
+            response.headers["Content-Length"] = str(len(data))
+            return response
         else:
             return jsonify({'error': 'Gagal membuat file audio'}), 500
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
